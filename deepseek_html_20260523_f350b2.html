@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Serenity Homestay | Complete Booking System</title>
+    <!-- Google Fonts & Font Awesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- FullCalendar for Availability -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    <!-- Lightbox for Gallery -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.4/css/lightbox.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.4/js/lightbox.min.js"></script>
+    <!-- Stripe JS (test mode) -->
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fefaf5;
+            color: #2c3e2f;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Header & Navigation */
+        header {
+            background: rgba(255, 250, 240, 0.96);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.03);
+            padding: 0.8rem 0;
+        }
+        .header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .logo a {
+            font-size: 1.6rem;
+            font-weight: 700;
+            text-decoration: none;
+            color: #2d6a4f;
+            letter-spacing: -0.3px;
+        }
+        nav ul {
+            display: flex;
+            gap: 1.5rem;
+            list-style: none;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        nav a {
+            text-decoration: none;
+            color: #2c3e2f;
+            font-weight: 500;
+            transition: 0.2s;
+        }
+        nav a:hover, .active-nav {
+            color: #e76f51;
+        }
+        .btn-book-nav {
+            background: #2d6a4f;
+            color: white !important;
+            padding: 8px 18px;
+            border-radius: 40px;
+        }
+        .hamburger {
+            display: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+        }
+
+        /* Sections */
+        .page-section {
+            display: none;
+            animation: fade 0.3s ease;
+        }
+        .active-section {
+            display: block;
+        }
+        @keyframes fade {
+            from { opacity: 0; transform: translateY(10px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+
+        /* Hero */
+        .hero {
+            background: linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.2)), url('https://picsum.photos/id/104/1920/700');
+            background-size: cover;
+            background-position: center 30%;
+            height: 85vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: white;
+            border-radius: 0 0 32px 32px;
+            margin-bottom: 2rem;
+        }
+        .hero-content h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .btn-primary {
+            background: #e9c46a;
+            color: #2d6a4f;
+            padding: 12px 32px;
+            border-radius: 40px;
+            text-decoration: none;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 24px;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        .btn-secondary {
+            background: #2d6a4f;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 40px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .room-grid, .gallery-grid, .amenities-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+        .room-card, .amenities-grid div {
+            background: white;
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            transition: 0.25s;
+        }
+        .room-card img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+        }
+        .room-card h3, .room-card p, .room-card .price {
+            padding: 0 1rem;
+        }
+        .price {
+            color: #e76f51;
+            font-weight: 700;
+            margin: 0.5rem 0;
+            display: inline-block;
+        }
+        .testimonial {
+            background: #e9f5e9;
+            text-align: center;
+            padding: 3rem 1rem;
+            border-radius: 48px;
+            margin: 3rem 0;
+            font-style: italic;
+        }
+        footer {
+            background: #1e3a2f;
+            color: #e0e9de;
+            padding: 2.5rem 0;
+            margin-top: 4rem;
+            border-radius: 32px 32px 0 0;
+        }
+        .whatsapp-chat {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #25d366;
+            border-radius: 50px;
+            padding: 12px 20px;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.2);
+            z-index: 1100;
+        }
+        .whatsapp-chat a {
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        /* Booking page layout */
+        .booking-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+        .calendar-container, .booking-form-container {
+            background: white;
+            border-radius: 28px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            margin: 6px 0 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            font-family: inherit;
+        }
+        .admin-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            background: #fff7ef;
+            padding: 2rem;
+            border-radius: 32px;
+        }
+        .gallery-grid a img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 20px;
+            transition: 0.2s;
+        }
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px,1fr));
+        }
+        @media (max-width: 780px) {
+            nav ul { display: none; flex-direction: column; width: 100%; background: white; position: absolute; top: 70px; left: 0; padding: 1rem; box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+            nav ul.show { display: flex; }
+            .hamburger { display: block; }
+            .booking-wrapper { grid-template-columns: 1fr; }
+            .admin-panel { grid-template-columns: 1fr; }
+            .hero-content h1 { font-size: 2.2rem; }
+        }
+        .note { font-size: 0.8rem; color: #6c757d; margin-top: 0.5rem; }
+        .fc { background: white; border-radius: 20px; }
+        .map-placeholder { height: 300px; background: #d9e3e6; border-radius: 28px; display: flex; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="container header-flex">
+        <div class="logo"><a href="#" id="logoLink">🌿 Serenity Homestay</a></div>
+        <nav>
+            <div class="hamburger"><i class="fas fa-bars"></i></div>
+            <ul id="navMenu">
+                <li><a href="#" data-section="home">Home</a></li>
+                <li><a href="#" data-section="about">About</a></li>
+                <li><a href="#" data-section="rooms">Rooms & Villas</a></li>
+                <li><a href="#" data-section="gallery">Gallery</a></li>
+                <li><a href="#" data-section="amenities">Amenities</a></li>
+                <li><a href="#" data-section="location">Location</a></li>
+                <li><a href="#" data-section="booking" class="btn-book-nav">Book Now</a></li>
+                <li><a href="#" data-section="admin">Admin</a></li>
+            </ul>
+        </nav>
+    </div>
+</header>
+
+<main>
+    <!-- ==================== HOME SECTION ==================== -->
+    <section id="home-section" class="page-section active-section">
+        <div class="hero">
+            <div class="hero-content">
+                <h1 id="heroTitle">Wake up to nature’s whispers</h1>
+                <p>Luxury homestay nestled in lush forests & serene valleys</p>
+                <a href="#" class="btn-primary" data-section="booking">Check Availability →</a>
+            </div>
+        </div>
+        <div class="container">
+            <div class="intro-text" style="text-align:center; margin:2rem 0">
+                <h2>Your home away from home, only better</h2>
+                <p>At Serenity Homestay, we blend modern comfort with the raw beauty of nature. Each room opens to panoramic views, organic meals from our garden, and experiences that stay with you forever.</p>
+                <div style="display: flex; gap: 1.5rem; justify-content: center; margin-top: 1.5rem; flex-wrap: wrap;">
+                    <span><i class="fas fa-star"></i> 4.9 ★ (350+ reviews)</span>
+                    <span><i class="fas fa-calendar-check"></i> Book direct – no extra fees</span>
+                    <span><i class="fas fa-leaf"></i> Eco-friendly luxury</span>
+                </div>
+            </div>
+            <div class="featured-rooms">
+                <h2>Our Signature Stays</h2>
+                <div class="room-grid" id="featuredRooms"></div>
+            </div>
+            <div class="testimonial">
+                <p>"The most peaceful stay I've ever had. The hosts treated us like family and the sunrise from the villa was unreal."</p>
+                <span>— A. Sharma, Google review</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== ABOUT SECTION ==================== -->
+    <section id="about-section" class="page-section container">
+        <h1>Our Story</h1>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: 2rem 0;">
+            <div>
+                <p>Founded in 2015 by the Mehta family, Serenity Homestay began as a small farmhouse and grew into a boutique eco-stay. We believe travel should heal, not just tour. Every material is locally sourced, every meal is farm-to-table, and every guest is treated like family.</p>
+                <p>We are proud to be a plastic-free property, run on solar energy, and actively involved in local forest conservation.</p>
+                <h3>Meet the hosts</h3>
+                <p>Ritu & Arjun Mehta — your hosts, chefs, and guides. They will personally ensure your stay is magical.</p>
+            </div>
+            <div><img src="https://picsum.photos/id/133/500/400" alt="Family running homestay" style="width:100%; border-radius: 28px;"></div>
+        </div>
+    </section>
+
+    <!-- ==================== ROOMS SECTION ==================== -->
+    <section id="rooms-section" class="page-section container">
+        <h1>Rooms & Villas</h1>
+        <div id="roomsDetailContainer" class="room-grid"></div>
+    </section>
+
+    <!-- ==================== GALLERY SECTION ==================== -->
+    <section id="gallery-section" class="page-section container">
+        <h1>Moments from our homestay</h1>
+        <div class="gallery-grid" id="galleryGrid"></div>
+    </section>
+
+    <!-- ==================== AMENITIES SECTION ==================== -->
+    <section id="amenities-section" class="page-section container">
+        <h1>What makes your stay special</h1>
+        <div class="amenities-grid" id="amenitiesList"></div>
+        <h2>Experiences you’ll remember</h2>
+        <ul class="experiences-list" style="margin: 1rem 0 2rem 2rem;">
+            <li>🌾 Farm-to-table cooking class</li>
+            <li>🌌 Stargazing with telescope</li>
+            <li>🎨 Local pottery workshop</li>
+            <li>🐦 Early morning birdwatching</li>
+        </ul>
+    </section>
+
+    <!-- ==================== LOCATION & CONTACT ==================== -->
+    <section id="location-section" class="page-section container">
+        <h1>Find us here</h1>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+            <div>
+                <p><strong>Address:</strong> Village Dharamshala, Dist. Kangra, Himachal Pradesh 176215</p>
+                <p><strong>Phone:</strong> +91 98765 43210</p>
+                <p><strong>Email:</strong> stay@serenityhomestay.com</p>
+                <p><strong>Check-in:</strong> 2 PM | <strong>Check-out:</strong> 11 AM</p>
+                <p>Nearest airport: Gaggal Airport (20 km) | Railway: Pathankot (85 km)</p>
+            </div>
+            <div id="mapContainer" class="map-placeholder">
+                <iframe width="100%" height="100%" frameborder="0" style="border:0; border-radius: 28px;" src="https://www.google.com/maps/embed/v1/place?key=AIzaSyCJ6p7FqNtM1iP7X5a6c9d8e7f6g5h4j3k2l1&q=McLeodGanj+Dharamshala" allowfullscreen></iframe>
+                <!-- Replace with your own API key for production -->
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== BOOKING SECTION ==================== -->
+    <section id="booking-section" class="page-section container">
+        <h1>Check Availability & Book</h1>
+        <div class="booking-wrapper">
+            <div class="calendar-container">
+                <div id="availability-calendar"></div>
+                <p class="note"><i class="fas fa-sync-alt"></i> Calendar syncs with Booking.com via iCal (admin panel)</p>
+            </div>
+            <div class="booking-form-container">
+                <form id="bookingForm">
+                    <label>Room Type</label>
+                    <select id="roomSelect" required></select>
+                    <label>Check-in</label>
+                    <input type="date" id="checkin" required>
+                    <label>Check-out</label>
+                    <input type="date" id="checkout" required>
+                    <label>Guests</label>
+                    <input type="number" min="1" max="6" value="2" required>
+                    <label>Full Name</label>
+                    <input type="text" id="guestName" required>
+                    <label>Email</label>
+                    <input type="email" id="guestEmail" required>
+                    <label>Phone (WhatsApp)</label>
+                    <input type="tel" id="guestPhone" required>
+                    <div id="priceDisplay" class="price" style="margin:10px 0;"></div>
+                    <button type="button" id="checkAvailabilityBtn" class="btn-secondary">Check Availability</button>
+                    <div id="availabilityMsg"></div>
+                    <button type="button" id="bookNowBtn" class="btn-primary" disabled>Proceed to Payment (20% deposit)</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== ADMIN PANEL ==================== -->
+    <section id="admin-section" class="page-section container">
+        <h1>Admin Dashboard</h1>
+        <div class="admin-panel">
+            <div>
+                <h2>Manual Date Blocking</h2>
+                <div id="admin-calendar"></div>
+                <p class="note">Click on any date to block/unblock (prevents double bookings).</p>
+                <h3>Booking.com iCal Sync</h3>
+                <input type="text" id="icalUrl" placeholder="Paste iCal feed URL from Booking.com" style="width:100%">
+                <button id="syncIcalBtn" class="btn-secondary">Sync iCal (demo)</button>
+                <p class="note">In live environment, server would fetch and merge iCal blocked dates.</p>
+            </div>
+            <div>
+                <h2>Update Prices & Content</h2>
+                <label>Forest Villa price ($)</label><input type="number" id="priceForest" value="199">
+                <label>River Cottage price ($)</label><input type="number" id="priceRiver" value="159">
+                <label>Garden Suite price ($)</label><input type="number" id="priceGarden" value="129">
+                <button id="savePrices" class="btn-secondary">Save Prices</button>
+                <hr>
+                <h3>Homepage Hero text</h3>
+                <textarea id="heroText" rows="2">Wake up to nature’s whispers</textarea>
+                <button id="saveHero" class="btn-secondary">Update Hero</button>
+                <hr>
+                <h3>Blocked dates summary</h3>
+                <div id="blockedDatesPreview" style="font-size:0.85rem; max-height:120px; overflow-y:auto;"></div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer>
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap:2rem;">
+            <div><h3>Serenity Homestay</h3><p>Offering quiet luxury in the lap of nature.</p></div>
+            <div><h4>Quick Links</h4><ul style="list-style:none"><li><a href="#" data-section="about" style="color:#ccc;">About</a></li><li><a href="#" data-section="rooms" style="color:#ccc;">Rooms</a></li><li><a href="#" data-section="gallery" style="color:#ccc;">Gallery</a></li></ul></div>
+            <div><h4>Contact</h4><p><i class="fas fa-map-marker-alt"></i> Green Valley, Himachal</p><p><i class="fas fa-phone"></i> +91 98765 43210</p></div>
+        </div>
+        <div class="copyright" style="text-align:center; margin-top:2rem;">© 2026 Serenity Homestay. Direct booking site.</div>
+    </div>
+</footer>
+
+<div class="whatsapp-chat">
+    <a href="https://wa.me/919876543210?text=Hello!%20I'm%20interested%20in%20booking%20a%20room" target="_blank"><i class="fab fa-whatsapp"></i> Chat with us</a>
+</div>
+
+<script>
+    // ---------- GLOBAL DATA ----------
+    let blockedDates = JSON.parse(localStorage.getItem('blockedDates')) || ['2026-06-10','2026-06-11','2026-06-12','2026-07-01','2026-07-02'];
+    let roomPrices = JSON.parse(localStorage.getItem('prices')) || { forest:199, river:159, garden:129 };
+    let heroTitleText = localStorage.getItem('heroTitle') || "Wake up to nature’s whispers";
+
+    // Room definitions
+    const roomsData = {
+        forest: { name: "Forest Canopy Villa", desc: "Private deck, open-air shower, forest view", basePrice: roomPrices.forest, img: "https://picsum.photos/id/104/400/300" },
+        river: { name: "River Stone Cottage", desc: "Right on the stream, fireplace, hammock", basePrice: roomPrices.river, img: "https://picsum.photos/id/15/400/300" },
+        garden: { name: "Garden Terrace Suite", desc: "Private garden entrance, outdoor tub", basePrice: roomPrices.garden, img: "https://picsum.photos/id/169/400/300" }
+    };
+
+    // Helper: update room prices from localStorage
+    function updateRoomPrices() {
+        roomsData.forest.basePrice = roomPrices.forest;
+        roomsData.river.basePrice = roomPrices.river;
+        roomsData.garden.basePrice = roomPrices.garden;
+        renderRoomsAndFeatures();
+    }
+
+    // Render rooms on home & rooms page
+    function renderRoomsAndFeatures() {
+        const featuredContainer = document.getElementById('featuredRooms');
+        const roomsDetail = document.getElementById('roomsDetailContainer');
+        if(featuredContainer) {
+            featuredContainer.innerHTML = Object.entries(roomsData).map(([key, r]) => `
+                <div class="room-card"><img src="${r.img}" alt="${r.name}"><h3>${r.name}</h3><p>${r.desc}</p><span class="price">$${r.basePrice}/night</span><br><a href="#" class="btn-secondary" data-section="booking" style="display:inline-block;margin:1rem;">Book Now</a></div>
+            `).join('');
+        }
+        if(roomsDetail) {
+            roomsDetail.innerHTML = Object.entries(roomsData).map(([key, r]) => `
+                <div class="room-card"><img src="${r.img}" alt="${r.name}"><h3>${r.name}</h3><p>${r.desc}</p><p><strong>Size:</strong> ${key==='forest'?'650 sq ft':'550 sq ft'} | <strong>View:</strong> Nature</p><p class="price">From $${r.basePrice}/night (includes breakfast)</p></div>
+            `).join('');
+        }
+        // update booking select options
+        const roomSelect = document.getElementById('roomSelect');
+        if(roomSelect) {
+            roomSelect.innerHTML = Object.entries(roomsData).map(([key,r]) => `<option value="${key}">${r.name} - $${r.basePrice}/night</option>`).join('');
+        }
+    }
+
+    // Gallery images
+    const galleryImages = [
+        "https://picsum.photos/id/104/500/400","https://picsum.photos/id/15/500/400","https://picsum.photos/id/169/500/400",
+        "https://picsum.photos/id/127/500/400","https://picsum.photos/id/96/500/400","https://picsum.photos/id/42/500/400"
+    ];
+    function loadGallery() {
+        const galleryDiv = document.getElementById('galleryGrid');
+        if(galleryDiv) {
+            galleryDiv.innerHTML = galleryImages.map(img => `<a href="${img}" data-lightbox="gallery"><img src="${img}" alt="Homestay photo"></a>`).join('');
+        }
+    }
+
+    // Amenities
+    const amenities = ["Infinity pool", "On-site spa & massage", "Guided nature trails", "Bonfire nights","Organic tea tasting","Complimentary cycles","High-speed Wi-Fi","Free parking"];
+    function loadAmenities() {
+        const amenitiesDiv = document.getElementById('amenitiesList');
+        if(amenitiesDiv) amenitiesDiv.innerHTML = amenities.map(a => `<div><i class="fas fa-check-circle"></i> ${a}</div>`).join('');
+    }
+
+    // Navigation and section switching
+    function showSection(sectionId) {
+        document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active-section'));
+        document.getElementById(`${sectionId}-section`).classList.add('active-section');
+        // update active nav style
+        document.querySelectorAll('nav ul li a').forEach(a => a.classList.remove('active-nav'));
+        document.querySelectorAll(`nav ul li a[data-section="${sectionId}"]`).forEach(a => a.classList.add('active-nav'));
+        if(sectionId === 'booking') initBookingCalendar();
+        if(sectionId === 'admin') initAdminCalendar();
+        if(sectionId === 'home') document.getElementById('heroTitle').innerText = heroTitleText;
+    }
+
+    // ---------- BOOKING CALENDAR & LOGIC ----------
+    let bookingCalendar = null;
+    function initBookingCalendar() {
+        if(bookingCalendar) {
+            bookingCalendar.destroy();
+        }
+        const calendarEl = document.getElementById('availability-calendar');
+        if(calendarEl) {
+            bookingCalendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                validRange: { start: '2026-06-01', end: '2027-02-01' },
+                events: blockedDates.map(date => ({ start: date, display: 'background', color: '#f4a261' })),
+                headerToolbar: { left: 'prev,next', center: 'title', right: 'dayGridMonth' }
+            });
+            bookingCalendar.render();
+        }
+    }
+
+    function checkDatesAvailability(checkin, checkout) {
+        let current = new Date(checkin);
+        const end = new Date(checkout);
+        while(current < end) {
+            const dateStr = current.toISOString().slice(0,10);
+            if(blockedDates.includes(dateStr)) return false;
+            current.setDate(current.getDate()+1);
+        }
+        return true;
+    }
+
+    // Admin calendar
+    let adminCalendar = null;
+    function initAdminCalendar() {
+        if(adminCalendar) adminCalendar.destroy();
+        const adminCal = document.getElementById('admin-calendar');
+        if(adminCal) {
+            adminCalendar = new FullCalendar.Calendar(adminCal, {
+                initialView: 'dayGridMonth',
+                dateClick: function(info) {
+                    const dateStr = info.dateStr;
+                    if(blockedDates.includes(dateStr)) {
+                        blockedDates = blockedDates.filter(d => d !== dateStr);
+                    } else {
+                        blockedDates.push(dateStr);
+                    }
+                    localStorage.setItem('blockedDates', JSON.stringify(blockedDates));
+                    updateBlockedPreview();
+                    adminCalendar.refetchEvents();
+                    if(bookingCalendar) bookingCalendar.refetchEvents();
+                    alert(`Blocked dates updated. Now: ${blockedDates.join(', ')}`);
+                },
+                events: blockedDates.map(d => ({ start: d, display: 'background', color: '#e76f51' }))
+            });
+            adminCalendar.render();
+        }
+    }
+
+    function updateBlockedPreview() {
+        const preview = document.getElementById('blockedDatesPreview');
+        if(preview) preview.innerText = blockedDates.length ? blockedDates.join(', ') : 'No blocked dates';
+    }
+
+    // Booking flow handlers
+    document.addEventListener('DOMContentLoaded', () => {
+        // Load initial data
+        updateRoomPrices();
+        loadGallery();
+        loadAmenities();
+        updateBlockedPreview();
+        document.getElementById('heroTitle').innerText = heroTitleText;
+
+        // Navigation
+        const navLinks = document.querySelectorAll('[data-section]');
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const section = link.getAttribute('data-section');
+                if(section) showSection(section);
+            });
+        });
+        document.getElementById('logoLink')?.addEventListener('click', (e) => { e.preventDefault(); showSection('home'); });
+
+        // Hamburger menu
+        document.querySelector('.hamburger')?.addEventListener('click', () => {
+            document.querySelector('#navMenu').classList.toggle('show');
+        });
+
+        // Availability check
+        document.getElementById('checkAvailabilityBtn')?.addEventListener('click', () => {
+            const checkin = document.getElementById('checkin').value;
+            const checkout = document.getElementById('checkout').value;
+            if(!checkin || !checkout) { alert('Select dates'); return; }
+            const available = checkDatesAvailability(checkin, checkout);
+            const msgDiv = document.getElementById('availabilityMsg');
+            if(available) {
+                msgDiv.innerHTML = '<span style="color:green">✓ Selected dates are available!</span>';
+                document.getElementById('bookNowBtn').disabled = false;
+                const nights = (new Date(checkout) - new Date(checkin)) / (1000*3600*24);
+                const roomKey = document.getElementById('roomSelect').value;
+                const rate = roomPrices[roomKey];
+                const total = rate * nights;
+                const deposit = (total * 0.2).toFixed(2);
+                document.getElementById('priceDisplay').innerHTML = `<strong>Total: $${total} (inc taxes) – Deposit (20%): $${deposit}</strong>`;
+            } else {
+                msgDiv.innerHTML = '<span style="color:red">✗ Some dates are already booked. Please choose other dates.</span>';
+                document.getElementById('bookNowBtn').disabled = true;
+            }
+        });
+
+        // Payment simulation + booking request
+        document.getElementById('bookNowBtn')?.addEventListener('click', () => {
+            const name = document.getElementById('guestName').value;
+            const email = document.getElementById('guestEmail').value;
+            const phone = document.getElementById('guestPhone').value;
+            if(!name || !email || !phone) { alert('Please fill all guest details'); return; }
+            const checkin = document.getElementById('checkin').value;
+            const checkout = document.getElementById('checkout').value;
+            const roomKey = document.getElementById('roomSelect').value;
+            const nights = (new Date(checkout) - new Date(checkin)) / (1000*3600*24);
+            const total = roomPrices[roomKey] * nights;
+            const deposit = (total * 0.2).toFixed(2);
+            // Mock Stripe redirect (simulate)
+            alert(`✨ Demo Booking Confirmation ✨\nHello ${name}, your ${roomsData[roomKey].name} stay from ${checkin} to ${checkout} is reserved (demo). Deposit $${deposit} would be processed via Stripe.\nAuto email & WhatsApp confirmation would be sent to ${email} / ${phone}.`);
+            // In live: call backend to create Stripe session and send notifications.
+        });
+
+        // Admin: save prices
+        document.getElementById('savePrices')?.addEventListener('click', () => {
+            roomPrices = {
+                forest: parseInt(document.getElementById('priceForest').value),
+                river: parseInt(document.getElementById('priceRiver').value),
+                garden: parseInt(document.getElementById('priceGarden').value)
+            };
+            localStorage.setItem('prices', JSON.stringify(roomPrices));
+            updateRoomPrices();
+            alert('Prices saved!');
+        });
+        document.getElementById('saveHero')?.addEventListener('click', () => {
+            heroTitleText = document.getElementById('heroText').value;
+            localStorage.setItem('heroTitle', heroTitleText);
+            document.getElementById('heroTitle').innerText = heroTitleText;
+            alert('Hero text updated');
+        });
+        document.getElementById('syncIcalBtn')?.addEventListener('click', () => {
+            const icalUrl = document.getElementById('icalUrl').value;
+            if(icalUrl) alert(`Demo: iCal sync from ${icalUrl} would fetch and merge blocked dates. For production, set up backend cron job.`);
+            else alert('Please enter iCal URL from Booking.com');
+        });
+
+        // Show home by default
+        showSection('home');
+    });
+</script>
+</body>
+</html>
